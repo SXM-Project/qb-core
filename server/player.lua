@@ -548,7 +548,7 @@ local playertables = { -- Add tables as needed
 function QBCore.Player.DeleteCharacter(source, citizenid)
     local license = QBCore.Functions.GetIdentifier(source, 'license')
     -- local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
-    local result = Mongo.Collection:findOne('players', { citizenid = citizenid })
+    local result = Mongo.Collection:find('players', { citizenid = citizenid })
 
     if license == result then
         local collections = Mongo.Collection.listCollectionNames()
@@ -587,7 +587,7 @@ end
 
 function QBCore.Player.ForceDeleteCharacter(citizenid)
     -- local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
-    local result = Mongo.Collection:findOne('players', { citizenid = citizenid })
+    local result = Mongo.Collection:find('players', { citizenid = citizenid })
 
     if result then
         local Player = QBCore.Functions.GetPlayerByCitizenId(citizenid)

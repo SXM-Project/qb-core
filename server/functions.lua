@@ -550,7 +550,8 @@ end
 function QBCore.Functions.IsPlayerBanned(source)
     local plicense = QBCore.Functions.GetIdentifier(source, 'license')
     -- local result = MySQL.single.await('SELECT id, reason, expire FROM bans WHERE license = ?', { plicense })
-    local result = Mongo.Collection:find('bans', { license = tostring(plicense) })
+    local result = Mongo.Collection:find('bans', { license = plicense })
+    -- print("IsPlayerBanned: "..result)
 
     if not result then return false end
 

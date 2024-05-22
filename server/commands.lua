@@ -10,6 +10,11 @@ RegisterCommand('mongo', function(source, args, rawCommand)
         _id = "4",
         name = "ted",
     })
+
+    local result = Mongo.Collection:find("users", {
+        _id = "4",
+    })
+    print("Find: "..result.name)
 end, true)
 
 CreateThread(function() -- Add ace to node for perm checking
