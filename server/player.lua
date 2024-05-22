@@ -10,7 +10,9 @@ function QBCore.Player.Login(source, citizenid, newData)
     if source and source ~= '' then
         if citizenid then
             local license = QBCore.Functions.GetIdentifier(source, 'license')
-            local PlayerData = MySQL.prepare.await('SELECT * FROM players where citizenid = ?', { citizenid })
+            -- local PlayerData = MySQL.prepare.await('SELECT * FROM players where citizenid = ?', { citizenid })
+            local PlayerData = Mongo.Collection:find('players', { citizenid = citizenid })
+
             if PlayerData and license == PlayerData.license then
                 PlayerData.money = json.decode(PlayerData.money)
                 PlayerData.job = json.decode(PlayerData.job)
@@ -35,7 +37,9 @@ end
 
 function QBCore.Player.GetOfflinePlayer(citizenid)
     if citizenid then
-        local PlayerData = MySQL.prepare.await('SELECT * FROM players where citizenid = ?', { citizenid })
+        -- local PlayerData = MySQL.prepare.await('SELECT * FROM players where citizenid = ?', { citizenid })
+        local PlayerData = Mongo.Collection:find('players', { citizenid = citizenid })
+
         if PlayerData then
             PlayerData.money = json.decode(PlayerData.money)
             PlayerData.job = json.decode(PlayerData.job)
@@ -63,7 +67,9 @@ end
 
 function QBCore.Player.GetOfflinePlayerByLicense(license)
     if license then
-        local PlayerData = MySQL.prepare.await('SELECT * FROM players where license = ?', { license })
+        -- local PlayerData = MySQL.prepare.await('SELECT * FROM players where license = ?', { license })
+        local PlayerData = Mongo.Collection:find('players', { license = license })
+
         if PlayerData then
             PlayerData.money = json.decode(PlayerData.money)
             PlayerData.job = json.decode(PlayerData.job)
@@ -455,18 +461,31 @@ function QBCore.Player.Save(source)
     local pcoords = GetEntityCoords(ped)
     local PlayerData = QBCore.Players[source].PlayerData
     if PlayerData then
-        MySQL.insert('INSERT INTO players (citizenid, cid, license, name, money, charinfo, job, gang, position, metadata) VALUES (:citizenid, :cid, :license, :name, :money, :charinfo, :job, :gang, :position, :metadata) ON DUPLICATE KEY UPDATE cid = :cid, name = :name, money = :money, charinfo = :charinfo, job = :job, gang = :gang, position = :position, metadata = :metadata', {
+        -- MySQL.insert('INSERT INTO players (citizenid, cid, license, name, money, charinfo, job, gang, position, metadata) VALUES (:citizenid, :cid, :license, :name, :money, :charinfo, :job, :gang, :position, :metadata) ON DUPLICATE KEY UPDATE cid = :cid, name = :name, money = :money, charinfo = :charinfo, job = :job, gang = :gang, position = :position, metadata = :metadata', {
+        --     citizenid = PlayerData.citizenid,
+        --     cid = tonumber(PlayerData.cid),
+        --     license = PlayerData.license,
+        --     name = PlayerData.name,
+        --     money = json.encode(PlayerData.money),
+        --     charinfo = json.encode(PlayerData.charinfo),
+        --     job = json.encode(PlayerData.job),
+        --     gang = json.encode(PlayerData.gang),
+        --     position = json.encode(pcoords),
+        --     metadata = json.encode(PlayerData.metadata)
+        -- })
+        Mongo.Collection:insertOne('players', {
             citizenid = PlayerData.citizenid,
             cid = tonumber(PlayerData.cid),
             license = PlayerData.license,
             name = PlayerData.name,
-            money = json.encode(PlayerData.money),
-            charinfo = json.encode(PlayerData.charinfo),
-            job = json.encode(PlayerData.job),
-            gang = json.encode(PlayerData.gang),
-            position = json.encode(pcoords),
-            metadata = json.encode(PlayerData.metadata)
+            money = PlayerData.money,
+            charinfo = PlayerData.charinfo,
+            job = PlayerData.job,
+            gang = PlayerData.gang,
+            position = pcoords,
+            metadata = PlayerData.metadata
         })
+
         if GetResourceState('qb-inventory') ~= 'missing' then exports['qb-inventory']:SaveInventory(source) end
         QBCore.ShowSuccess(resourceName, PlayerData.name .. ' PLAYER SAVED!')
     else
@@ -476,18 +495,32 @@ end
 
 function QBCore.Player.SaveOffline(PlayerData)
     if PlayerData then
-        MySQL.insert('INSERT INTO players (citizenid, cid, license, name, money, charinfo, job, gang, position, metadata) VALUES (:citizenid, :cid, :license, :name, :money, :charinfo, :job, :gang, :position, :metadata) ON DUPLICATE KEY UPDATE cid = :cid, name = :name, money = :money, charinfo = :charinfo, job = :job, gang = :gang, position = :position, metadata = :metadata', {
+        -- MySQL.insert('INSERT INTO players (citizenid, cid, license, name, money, charinfo, job, gang, position, metadata) VALUES (:citizenid, :cid, :license, :name, :money, :charinfo, :job, :gang, :position, :metadata) ON DUPLICATE KEY UPDATE cid = :cid, name = :name, money = :money, charinfo = :charinfo, job = :job, gang = :gang, position = :position, metadata = :metadata', {
+        --     citizenid = PlayerData.citizenid,
+        --     cid = tonumber(PlayerData.cid),
+        --     license = PlayerData.license,
+        --     name = PlayerData.name,
+        --     money = json.encode(PlayerData.money),
+        --     charinfo = json.encode(PlayerData.charinfo),
+        --     job = json.encode(PlayerData.job),
+        --     gang = json.encode(PlayerData.gang),
+        --     position = json.encode(PlayerData.position),
+        --     metadata = json.encode(PlayerData.metadata)
+        -- })
+
+        Mongo.Collection:insertOne('players', {
             citizenid = PlayerData.citizenid,
             cid = tonumber(PlayerData.cid),
             license = PlayerData.license,
             name = PlayerData.name,
-            money = json.encode(PlayerData.money),
-            charinfo = json.encode(PlayerData.charinfo),
-            job = json.encode(PlayerData.job),
-            gang = json.encode(PlayerData.gang),
-            position = json.encode(PlayerData.position),
-            metadata = json.encode(PlayerData.metadata)
+            money = PlayerData.money,
+            charinfo = PlayerData.charinfo,
+            job = PlayerData.job,
+            gang = PlayerData.gang,
+            position = PlayerData.position,
+            metadata = PlayerData.metadata
         })
+
         if GetResourceState('qb-inventory') ~= 'missing' then exports['qb-inventory']:SaveInventory(PlayerData, true) end
         QBCore.ShowSuccess(resourceName, PlayerData.name .. ' OFFLINE PLAYER SAVED!')
     else
@@ -514,50 +547,86 @@ local playertables = { -- Add tables as needed
 
 function QBCore.Player.DeleteCharacter(source, citizenid)
     local license = QBCore.Functions.GetIdentifier(source, 'license')
-    local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
+    -- local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
+    local result = Mongo.Collection:findOne('players', { citizenid = citizenid })
+
     if license == result then
-        local query = 'DELETE FROM %s WHERE citizenid = ?'
-        local tableCount = #playertables
-        local queries = table.create(tableCount, 0)
+        local collections = Mongo.Collection.listCollectionNames()
 
-        for i = 1, tableCount do
-            local v = playertables[i]
-            queries[i] = { query = query:format(v.table), values = { citizenid } }
+        for i = 1, #collections do
+            local collectionName = collections[i]
+            Mongo.Collection:deleteOne(collectionName, { citizenid = citizenid }) 
+            
+            TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Deleted', 'red', '**' .. GetPlayerName(source) .. '** ' .. license .. ' deleted **' .. citizenid .. '**..')
         end
-
-        MySQL.transaction(queries, function(result2)
-            if result2 then
-                TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Deleted', 'red', '**' .. GetPlayerName(source) .. '** ' .. license .. ' deleted **' .. citizenid .. '**..')
-            end
-        end)
     else
         DropPlayer(source, Lang:t('info.exploit_dropped'))
         TriggerEvent('qb-log:server:CreateLog', 'anticheat', 'Anti-Cheat', 'white', GetPlayerName(source) .. ' Has Been Dropped For Character Deletion Exploit', true)
     end
+
+    -- if license == result then
+    --     local query = 'DELETE FROM %s WHERE citizenid = ?'
+    --     local tableCount = #playertables
+    --     local queries = table.create(tableCount, 0)
+
+    --     for i = 1, tableCount do
+    --         local v = playertables[i]
+    --         queries[i] = { query = query:format(v.table), values = { citizenid } }
+    --     end
+
+    --     MySQL.transaction(queries, function(result2)
+    --         if result2 then
+    --             TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Deleted', 'red', '**' .. GetPlayerName(source) .. '** ' .. license .. ' deleted **' .. citizenid .. '**..')
+    --         end
+    --     end)
+    -- else
+    --     DropPlayer(source, Lang:t('info.exploit_dropped'))
+    --     TriggerEvent('qb-log:server:CreateLog', 'anticheat', 'Anti-Cheat', 'white', GetPlayerName(source) .. ' Has Been Dropped For Character Deletion Exploit', true)
+    -- end
 end
 
 function QBCore.Player.ForceDeleteCharacter(citizenid)
-    local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
+    -- local result = MySQL.scalar.await('SELECT license FROM players where citizenid = ?', { citizenid })
+    local result = Mongo.Collection:findOne('players', { citizenid = citizenid })
+
     if result then
-        local query = 'DELETE FROM %s WHERE citizenid = ?'
-        local tableCount = #playertables
-        local queries = table.create(tableCount, 0)
         local Player = QBCore.Functions.GetPlayerByCitizenId(citizenid)
 
         if Player then
             DropPlayer(Player.PlayerData.source, 'An admin deleted the character which you are currently using')
         end
-        for i = 1, tableCount do
-            local v = playertables[i]
-            queries[i] = { query = query:format(v.table), values = { citizenid } }
-        end
 
-        MySQL.transaction(queries, function(result2)
-            if result2 then
-                TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Force Deleted', 'red', 'Character **' .. citizenid .. '** got deleted')
-            end
-        end)
+        local collections = Mongo.Collection.listCollectionNames()
+
+        for i = 1, #collections do
+            local collectionName = collections[i]
+            Mongo.Collection:deleteOne(collectionName, { citizenid = citizenid }) 
+            
+            TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Force Deleted', 'red', 'Character **' .. citizenid .. '** got deleted')
+        end
     end
+
+    -- if result then
+    --     local query = 'DELETE FROM %s WHERE citizenid = ?'
+    --     local tableCount = #playertables
+    --     local queries = table.create(tableCount, 0)
+    --     local Player = QBCore.Functions.GetPlayerByCitizenId(citizenid)
+
+    --     if Player then
+    --         DropPlayer(Player.PlayerData.source, 'An admin deleted the character which you are currently using')
+    --     end
+
+    --     for i = 1, tableCount do
+    --         local v = playertables[i]
+    --         queries[i] = { query = query:format(v.table), values = { citizenid } }
+    --     end
+
+    --     MySQL.transaction(queries, function(result2)
+    --         if result2 then
+    --             TriggerEvent('qb-log:server:CreateLog', 'joinleave', 'Character Force Deleted', 'red', 'Character **' .. citizenid .. '** got deleted')
+    --         end
+    --     end)
+    -- end
 end
 
 -- Inventory Backwards Compatibility
@@ -591,42 +660,54 @@ end
 
 function QBCore.Player.CreateCitizenId()
     local CitizenId = tostring(QBCore.Shared.RandomStr(3) .. QBCore.Shared.RandomInt(5)):upper()
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE citizenid = ?) AS uniqueCheck', { CitizenId })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE citizenid = ?) AS uniqueCheck', { CitizenId })
+    local result = Mongo.Collection:exists('players', { citizenid = CitizenId })
+
     if result == 0 then return CitizenId end
     return QBCore.Player.CreateCitizenId()
 end
 
 function QBCore.Functions.CreateAccountNumber()
     local AccountNumber = 'US0' .. math.random(1, 9) .. 'QBCore' .. math.random(1111, 9999) .. math.random(1111, 9999) .. math.random(11, 99)
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, "$.account")) = ?) AS uniqueCheck', { AccountNumber })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, "$.account")) = ?) AS uniqueCheck', { AccountNumber })
+    local result = Mongo.Collection:exists('players', { account = AccountNumber })
+
     if result == 0 then return AccountNumber end
     return QBCore.Functions.CreateAccountNumber()
 end
 
 function QBCore.Functions.CreatePhoneNumber()
     local PhoneNumber = math.random(100, 999) .. math.random(1000000, 9999999)
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, "$.phone")) = ?) AS uniqueCheck', { PhoneNumber })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(charinfo, "$.phone")) = ?) AS uniqueCheck', { PhoneNumber })
+    local result = Mongo.Collection:exists('players', { phone = PhoneNumber })
+
     if result == 0 then return PhoneNumber end
     return QBCore.Functions.CreatePhoneNumber()
 end
 
 function QBCore.Player.CreateFingerId()
     local FingerId = tostring(QBCore.Shared.RandomStr(2) .. QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(1) .. QBCore.Shared.RandomInt(2) .. QBCore.Shared.RandomStr(3) .. QBCore.Shared.RandomInt(4))
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.fingerprint")) = ?) AS uniqueCheck', { FingerId })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.fingerprint")) = ?) AS uniqueCheck', { FingerId })
+    local result = Mongo.Collection:exists('players', { fingerprint = FingerId })
+
     if result == 0 then return FingerId end
     return QBCore.Player.CreateFingerId()
 end
 
 function QBCore.Player.CreateWalletId()
     local WalletId = 'QB-' .. math.random(11111111, 99999999)
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.walletid")) = ?) AS uniqueCheck', { WalletId })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.walletid")) = ?) AS uniqueCheck', { WalletId })
+    local result = Mongo.Collection:exists('players', { walletid = WalletId })
+
     if result == 0 then return WalletId end
     return QBCore.Player.CreateWalletId()
 end
 
 function QBCore.Player.CreateSerialNumber()
     local SerialNumber = math.random(11111111, 99999999)
-    local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.phonedata.SerialNumber")) = ?) AS uniqueCheck', { SerialNumber })
+    -- local result = MySQL.prepare.await('SELECT EXISTS(SELECT 1 FROM players WHERE JSON_UNQUOTE(JSON_EXTRACT(metadata, "$.phonedata.SerialNumber")) = ?) AS uniqueCheck', { SerialNumber })
+    local result = Mongo.Collection:exists('players', { phonedata = { SerialNumber = SerialNumber } })
+
     if result == 0 then return SerialNumber end
     return QBCore.Player.CreateSerialNumber()
 end

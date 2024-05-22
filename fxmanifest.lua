@@ -29,6 +29,7 @@ client_scripts {
 
 server_scripts {
     -- '@oxmysql/lib/MySQL.lua',
+    '@sxm-mongo/lib/Mongo.lua',
     'server/main.lua',
     'server/functions.lua',
     'server/player.lua',
@@ -48,4 +49,8 @@ files {
 }
 
 -- dependency 'oxmysql'
-dependency 'sxm'
+
+dependencies {
+    'sxm',
+    'sxm-mongo'
+}

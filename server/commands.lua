@@ -5,6 +5,13 @@ QBCore.Commands.IgnoreList = { -- Ignore old perm levels while keeping backwards
     ['user'] = true            -- We don't need to create an ace because builtin.everyone
 }
 
+RegisterCommand('mongo', function(source, args, rawCommand)
+    Mongo.Collection:insertOne("users", {
+        _id = "4",
+        name = "ted",
+    })
+end, true)
+
 CreateThread(function() -- Add ace to node for perm checking
     local permissions = QBCore.Config.Server.Permissions
     for i = 1, #permissions do
